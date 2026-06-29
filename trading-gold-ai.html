@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trading Gold AI — Private Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold:    #C9A84C;
+      --gold-lt: #E8C96E;
+      --gold-dk: #7A5C1E;
+      --obsidian:#0B0C0E;
+      --ink:     #111318;
+      --smoke:   #1B1D22;
+      --card:    #161820;
+      --mist:    #8A8D96;
+      --white:   #F5F3EE;
+      --green:   #4ADE80;
+      --red:     #F87171;
+      --blue:    #60A5FA;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--obsidian);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+    }
+    #bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none; opacity: 0.3;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 2.4rem;
+      backdrop-filter: blur(14px);
+      background: rgba(11,12,14,0.75);
+      border-bottom: 1px solid rgba(201,168,76,0.12);
+    }
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.78rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold);
+      cursor: pointer;
+    }
+    .nav-links { display: flex; gap: 0.3rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.72rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--mist);
+      text-decoration: none; padding: 0.45rem 1rem;
+      border-radius: 2px; transition: color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--gold-lt);
+      background: rgba(201,168,76,0.08);
+    }
+
+    /* ── PAGES ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ══════════════════════════════
+       PAGE 1 — LANDING
+    ══════════════════════════════ */
+    .hero {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center; padding: 8rem 2rem 4rem;
+    }
+    .eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.68rem; letter-spacing: 0.28em;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 1.8rem;
+      animation: fadeUp 0.9s ease forwards 0.2s; opacity: 0;
+    }
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3rem, 8vw, 7rem);
+      font-weight: 900; line-height: 1.02;
+      animation: fadeUp 0.9s ease forwards 0.45s; opacity: 0;
+    }
+    .hero-title em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--gold-lt), var(--gold), var(--gold-dk));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      margin-top: 1.5rem; max-width: 520px;
+      font-size: 1rem; line-height: 1.7; color: var(--mist);
+      animation: fadeUp 0.9s ease forwards 0.65s; opacity: 0;
+    }
+    .hero-cta {
+      margin-top: 2.8rem;
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.9s ease forwards 0.85s; opacity: 0;
+    }
+    .btn-primary {
+      padding: 0.85rem 2.2rem;
+      background: linear-gradient(135deg, var(--gold-lt), var(--gold));
+      color: var(--ink); font-family: 'Space Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+      border: none; cursor: pointer;
+      clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+      transition: filter 0.2s, transform 0.2s;
+    }
+    .btn-primary:hover { filter: brightness(1.15); transform: translateY(-2px); }
+    .btn-ghost {
+      padding: 0.85rem 2.2rem;
+      background: transparent; color: var(--gold);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+      border: 1px solid rgba(201,168,76,0.4); cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold-lt); }
+
+    .ticker-wrap {
+      position: relative; z-index: 1; overflow: hidden;
+      border-top: 1px solid rgba(201,168,76,0.15);
+      border-bottom: 1px solid rgba(201,168,76,0.15);
+      padding: 0.65rem 0; background: rgba(201,168,76,0.04);
+    }
+    .ticker-track { display: flex; gap: 3rem; width: max-content; animation: ticker 22s linear infinite; }
+    .ticker-item { font-family: 'Space Mono', monospace; font-size: 0.68rem; letter-spacing: 0.12em; color: var(--gold); white-space: nowrap; }
+    .ticker-item span { color: var(--mist); margin-left: 0.4rem; }
+    .ticker-item.up::before { content: "▲ "; color: var(--green); }
+    .ticker-item.dn::before { content: "▼ "; color: var(--red); }
+
+    .lp-section {
+      position: relative; z-index: 1;
+      padding: 5rem 2rem; max-width: 1100px; margin: 0 auto;
+    }
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.26em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.8rem;
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 700; line-height: 1.15; margin-bottom: 1.2rem;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1.4rem; margin-top: 2.5rem;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid rgba(201,168,76,0.12);
+      padding: 1.8rem; transition: border-color 0.25s, transform 0.25s;
+    }
+    .feature-card:hover { border-color: rgba(201,168,76,0.4); transform: translateY(-4px); }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 0.9rem; display: block; }
+    .feature-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gold-lt); margin-bottom: 0.5rem; }
+    .feature-desc { font-size: 0.84rem; line-height: 1.65; color: var(--mist); }
+
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border: 1px solid rgba(201,168,76,0.14); margin-top: 2.5rem; }
+    .step { padding: 2rem 1.6rem; border-right: 1px solid rgba(201,168,76,0.14); }
+    .step:last-child { border-right: none; }
+    .step-num { font-family: 'Space Mono', monospace; font-size: 0.62rem; letter-spacing: 0.2em; color: var(--gold); margin-bottom: 0.8rem; }
+    .step-title { font-family: 'Playfair Display', serif; font-size: 1rem; margin-bottom: 0.4rem; }
+    .step-desc { font-size: 0.82rem; line-height: 1.65; color: var(--mist); }
+
+    .cta-block {
+      text-align: center; padding: 5rem 2rem; position: relative; z-index: 1;
+      background: linear-gradient(180deg, transparent, rgba(201,168,76,0.05), transparent);
+      border-top: 1px solid rgba(201,168,76,0.12);
+      border-bottom: 1px solid rgba(201,168,76,0.12);
+    }
+    .cta-block p { color: var(--mist); max-width: 480px; margin: 0 auto 2rem; font-size: 0.92rem; line-height: 1.7; }
+
+    /* ══════════════════════════════
+       PAGE 2 — TRADE JOURNAL
+    ══════════════════════════════ */
+    .dashboard {
+      position: relative; z-index: 1;
+      padding: 6.5rem 1.5rem 3rem; max-width: 1200px; margin: 0 auto;
+    }
+    .dash-header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .dash-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 900;
+    }
+    .dash-title span { color: var(--gold); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1px; background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.12);
+      margin-bottom: 2rem;
+    }
+    .stat-box {
+      background: var(--card); padding: 1.2rem 1.4rem;
+    }
+    .stat-box-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mist); margin-bottom: 0.4rem; }
+    .stat-box-value { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; }
+    .stat-box-value.green { color: var(--green); }
+    .stat-box-value.red { color: var(--red); }
+    .stat-box-value.gold { color: var(--gold); }
+
+    /* Add trade form */
+    .trade-form-wrap {
+      background: var(--card);
+      border: 1px solid rgba(201,168,76,0.18);
+      padding: 1.8rem; margin-bottom: 2rem;
+    }
+    .form-title {
+      font-family: 'Space Mono', monospace; font-size: 0.65rem;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 1.2rem;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.9rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label {
+      font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--mist);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(201,168,76,0.2);
+      color: var(--white); font-family: 'Space Mono', monospace;
+      font-size: 0.8rem; padding: 0.6rem 0.8rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--gold); }
+    .form-group select option { background: var(--ink); }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .form-actions { display: flex; gap: 0.8rem; margin-top: 1.2rem; flex-wrap: wrap; }
+
+    /* Trade table */
+    .trade-table-wrap { overflow-x: auto; }
+    .trade-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    .trade-table th {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold);
+      padding: 0.8rem 1rem; text-align: left;
+      border-bottom: 1px solid rgba(201,168,76,0.18);
+      background: var(--card); white-space: nowrap;
+    }
+    .trade-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--white); vertical-align: middle;
+    }
+    .trade-table tr:hover td { background: rgba(201,168,76,0.04); }
+    .badge {
+      display: inline-block; padding: 0.2rem 0.7rem;
+      font-family: 'Space Mono', monospace; font-size: 0.6rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .badge-buy { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+    .badge-sell { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+    .badge-win { background: rgba(74,222,128,0.12); color: var(--green); }
+    .badge-loss { background: rgba(248,113,113,0.12); color: var(--red); }
+    .pnl-positive { color: var(--green); font-weight: 600; }
+    .pnl-negative { color: var(--red); font-weight: 600; }
+    .del-btn {
+      background: none; border: 1px solid rgba(248,113,113,0.3);
+      color: var(--red); font-size: 0.7rem; padding: 0.25rem 0.6rem;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .del-btn:hover { background: rgba(248,113,113,0.1); }
+    .empty-state {
+      text-align: center; padding: 3rem; color: var(--mist);
+      font-family: 'Space Mono', monospace; font-size: 0.75rem;
+      letter-spacing: 0.1em;
+    }
+    .filter-bar {
+      display: flex; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap;
+    }
+    .filter-btn {
+      font-family: 'Space Mono', monospace; font-size: 0.62rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.4rem 1rem; border: 1px solid rgba(201,168,76,0.2);
+      background: none; color: var(--mist); cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      border-color: var(--gold); color: var(--gold);
+      background: rgba(201,168,76,0.06);
+    }
+
+    /* ══════════════════════════════
+       PAGE 3 — LIBRARY
+    ══════════════════════════════ */
+    .library-wrap {
+      position: relative; z-index: 1;
+      padding: 6.5rem 1.5rem 3rem; max-width: 1100px; margin: 0 auto;
+    }
+    .lib-header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .lib-form-wrap {
+      background: var(--card);
+      border: 1px solid rgba(201,168,76,0.18);
+      padding: 1.8rem; margin-bottom: 2rem;
+    }
+    .lib-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.9rem;
+    }
+    .lib-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.2rem;
+    }
+    .lib-card {
+      background: var(--card);
+      border: 1px solid rgba(201,168,76,0.12);
+      padding: 1.4rem; transition: border-color 0.2s, transform 0.2s;
+      position: relative;
+    }
+    .lib-card:hover { border-color: rgba(201,168,76,0.35); transform: translateY(-3px); }
+    .lib-card-cat {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+    .lib-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem; font-weight: 700;
+      margin-bottom: 0.4rem; color: var(--white);
+    }
+    .lib-card-desc { font-size: 0.82rem; line-height: 1.6; color: var(--mist); }
+    .lib-card-date {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem; color: var(--gold-dk);
+      margin-top: 0.8rem;
+    }
+    .lib-card-del {
+      position: absolute; top: 0.8rem; right: 0.8rem;
+    }
+    .cat-tag {
+      display: inline-block; padding: 0.15rem 0.6rem;
+      font-family: 'Space Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      border-radius: 1px;
+    }
+    .cat-ict     { background: rgba(96,165,250,0.12); color: var(--blue); border: 1px solid rgba(96,165,250,0.25); }
+    .cat-psych   { background: rgba(167,139,250,0.12); color: #A78BFA; border: 1px solid rgba(167,139,250,0.25); }
+    .cat-risk    { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+    .cat-macro   { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+    .cat-setup   { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); }
+    .cat-other   { background: rgba(255,255,255,0.06); color: var(--mist); border: 1px solid rgba(255,255,255,0.1); }
+
+    /* ── SHARED ── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 2rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem; letter-spacing: 0.14em;
+      color: var(--gold-dk);
+      border-top: 1px solid rgba(201,168,76,0.08);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    @media (max-width: 640px) {
+      nav { padding: 1rem 1rem; }
+      .nav-links a { padding: 0.4rem 0.5rem; font-size: 0.62rem; }
+      .steps { grid-template-columns: 1fr; }
+      .step { border-right: none; border-bottom: 1px solid rgba(201,168,76,0.14); }
+      .step:last-child { border-bottom: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="logo" onclick="showPage('landing')">Trading Gold AI</div>
+  <ul class="nav-links">
+    <li><a onclick="showPage('landing')" id="nav-landing">Home</a></li>
+    <li><a onclick="showPage('journal')" id="nav-journal">📒 My Room</a></li>
+    <li><a onclick="showPage('library')" id="nav-library">📚 Library</a></li>
+  </ul>
+</nav>
+
+<!-- ══ PAGE 1: LANDING ══ -->
+<div id="page-landing" class="page active">
+  <section class="hero">
+    <p class="eyebrow">Private AI Trading Assistant</p>
+    <h1 class="hero-title">Read the market.<br><em>Own the gold.</em></h1>
+    <p class="hero-sub">Trading Gold AI — oltin bozorini tahlil qiluvchi, yuqori ehtimollik signallarini topuvchi va sizning shaxsiy trading yordamchingiz.</p>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="showPage('journal')">📒 My Room ga kirish</button>
+      <button class="btn-ghost" onclick="showPage('library')">📚 Kutubxona</button>
+    </div>
+  </section>
+
+  <div class="ticker-wrap">
+    <div class="ticker-track">
+      <span class="ticker-item up">XAU/USD <span>2 341.50</span></span>
+      <span class="ticker-item up">DXY <span>104.32</span></span>
+      <span class="ticker-item dn">EUR/USD <span>1.0821</span></span>
+      <span class="ticker-item up">XAG/USD <span>27.14</span></span>
+      <span class="ticker-item dn">US10Y <span>4.61%</span></span>
+      <span class="ticker-item up">OIL/USD <span>81.90</span></span>
+      <span class="ticker-item dn">NASDAQ <span>17 812</span></span>
+      <span class="ticker-item up">XAU/USD <span>2 341.50</span></span>
+      <span class="ticker-item up">DXY <span>104.32</span></span>
+      <span class="ticker-item dn">EUR/USD <span>1.0821</span></span>
+      <span class="ticker-item up">XAG/USD <span>27.14</span></span>
+      <span class="ticker-item dn">US10Y <span>4.61%</span></span>
+      <span class="ticker-item up">OIL/USD <span>81.90</span></span>
+      <span class="ticker-item dn">NASDAQ <span>17 812</span></span>
+    </div>
+  </div>
+
+  <section class="lp-section" id="features">
+    <p class="section-label">Imkoniyatlar</p>
+    <h2 class="section-title">Oltin uchun qurilgan.<br>Siz uchun sozlangan.</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">📒</span>
+        <p class="feature-title">Shaxsiy Xona</p>
+        <p class="feature-desc">Har kunlik tradelarni professional format bilan yozing — kirish, chiqish, P&L, setup tahlili.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📚</span>
+        <p class="feature-title">Shaxsiy Kutubxona</p>
+        <p class="feature-desc">O'rgangan narsalaringizni kategoriyalar bo'yicha saqlang — ICT, psixologiya, risk, makro.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔮</span>
+        <p class="feature-title">AI Signal Engine</p>
+        <p class="feature-desc">Order blocks, FVG, likvidlik sweeplari — real vaqtda tahlil.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🛡️</span>
+        <p class="feature-title">Risk Guardian</p>
+        <p class="feature-desc">Lot size, stop-loss, R:R — avtomatik hisoblash.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📊</span>
+        <p class="feature-title">Statistika</p>
+        <p class="feature-desc">Win rate, umumiy P&L, eng yaxshi setup — barchasi ko'rinadi.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔒</span>
+        <p class="feature-title">To'liq Maxfiy</p>
+        <p class="feature-desc">Ma'lumotlar faqat sizning brauzeringizda. Hech kim ko'rmaydi.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section" id="how" style="padding-top:0">
+    <p class="section-label">Jarayon</p>
+    <h2 class="section-title">Signaldan tradegacha.</h2>
+    <div class="steps">
+      <div class="step">
+        <p class="step-num">— 01</p>
+        <p class="step-title">Trade oching</p>
+        <p class="step-desc">My Room ga kiring, yangi trade qo'shing — sana, setup, entry, SL, TP.</p>
+      </div>
+      <div class="step">
+        <p class="step-num">— 02</p>
+        <p class="step-title">Tahlil yozing</p>
+        <p class="step-desc">Nima ko'rdingiz? Nima o'yladingiz? Xato nima edi? Hammasini yozing.</p>
+      </div>
+      <div class="step">
+        <p class="step-num">— 03</p>
+        <p class="step-title">Natijani kiriting</p>
+        <p class="step-desc">Win/Loss va P&L ($) — statistika avtomatik yangilanadi.</p>
+      </div>
+      <div class="step">
+        <p class="step-num">— 04</p>
+        <p class="step-title">O'rganganlarni saqlang</p>
+        <p class="step-desc">Kutubxonaga bilimlarni qo'shing. Har kuni o'qing, professional bo'ling.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="cta-block" id="contact">
+    <p class="section-label">Hoziroq boshlang</p>
+    <h2 class="section-title">Shaxsiy xonangiz<br><em style="font-style:normal;background:linear-gradient(135deg,#E8C96E,#C9A84C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">sizni kutmoqda.</em></h2>
+    <p>Professional traderlar kabi yozing, o'rganing, rivojlaning.</p>
+    <button class="btn-primary" onclick="showPage('journal')">📒 My Room ga kirish</button>
+  </div>
+
+  <footer>© 2026 Trading Gold AI — Private Assistant · Barcha huquqlar himoyalangan</footer>
+</div>
+
+<!-- ══ PAGE 2: JOURNAL ══ -->
+<div id="page-journal" class="page">
+  <div class="dashboard">
+    <div class="dash-header">
+      <div>
+        <p class="section-label">Shaxsiy Xona</p>
+        <h1 class="dash-title">Trade <span>Journal</span></h1>
+      </div>
+      <button class="btn-primary" onclick="toggleForm('trade-form')">+ Yangi Trade</button>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-box">
+        <div class="stat-box-label">Jami Tradlar</div>
+        <div class="stat-box-value gold" id="s-total">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-label">Win Rate</div>
+        <div class="stat-box-value green" id="s-winrate">0%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-label">Jami P&L</div>
+        <div class="stat-box-value" id="s-pnl">$0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-label">Yutqazdi</div>
+        <div class="stat-box-value red" id="s-losses">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-label">G'alaba</div>
+        <div class="stat-box-value green" id="s-wins">0</div>
+      </div>
+    </div>
+
+    <!-- Add trade form -->
+    <div class="trade-form-wrap" id="trade-form" style="display:none">
+      <p class="form-title">— Yangi Trade Qo'shish</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Sana</label>
+          <input type="date" id="t-date"/>
+        </div>
+        <div class="form-group">
+          <label>Juftlik</label>
+          <select id="t-pair">
+            <option>XAU/USD</option>
+            <option>EUR/USD</option>
+            <option>GBP/USD</option>
+            <option>USD/JPY</option>
+            <option>XAG/USD</option>
+            <option>Boshqa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Yo'nalish</label>
+          <select id="t-dir">
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Setup</label>
+          <select id="t-setup">
+            <option>Order Block</option>
+            <option>FVG</option>
+            <option>Liquidity Sweep</option>
+            <option>CRT</option>
+            <option>EMA Crossover</option>
+            <option>S&R</option>
+            <option>Breakout</option>
+            <option>Boshqa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Entry narx</label>
+          <input type="number" id="t-entry" step="0.01" placeholder="2341.50"/>
+        </div>
+        <div class="form-group">
+          <label>Stop Loss</label>
+          <input type="number" id="t-sl" step="0.01" placeholder="2335.00"/>
+        </div>
+        <div class="form-group">
+          <label>Take Profit</label>
+          <input type="number" id="t-tp" step="0.01" placeholder="2355.00"/>
+        </div>
+        <div class="form-group">
+          <label>Lot Size</label>
+          <input type="number" id="t-lot" step="0.01" placeholder="0.10"/>
+        </div>
+        <div class="form-group">
+          <label>Natija</label>
+          <select id="t-result">
+            <option value="WIN">WIN ✅</option>
+            <option value="LOSS">LOSS ❌</option>
+            <option value="BE">Break Even ⚖️</option>
+            <option value="OPEN">Ochiq 🔄</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>P&L ($)</label>
+          <input type="number" id="t-pnl" step="0.01" placeholder="+125.00"/>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:0.9rem">
+        <label>Tahlil / Izoh</label>
+        <textarea id="t-notes" placeholder="Nima ko'rdim? Nima o'yladim? Xato nima edi? Keyingi safar nima qilaman?"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveTrade()">Saqlash</button>
+        <button class="btn-ghost" onclick="toggleForm('trade-form')">Bekor</button>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterTrades('all', this)">Barchasi</button>
+      <button class="filter-btn" onclick="filterTrades('WIN', this)">✅ Win</button>
+      <button class="filter-btn" onclick="filterTrades('LOSS', this)">❌ Loss</button>
+      <button class="filter-btn" onclick="filterTrades('OPEN', this)">🔄 Ochiq</button>
+      <button class="filter-btn" onclick="filterTrades('BUY', this)">▲ Buy</button>
+      <button class="filter-btn" onclick="filterTrades('SELL', this)">▼ Sell</button>
+    </div>
+
+    <!-- Table -->
+    <div class="trade-table-wrap">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Sana</th>
+            <th>Juftlik</th>
+            <th>Yo'nalish</th>
+            <th>Setup</th>
+            <th>Entry</th>
+            <th>SL</th>
+            <th>TP</th>
+            <th>Lot</th>
+            <th>Natija</th>
+            <th>P&L</th>
+            <th>Izoh</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="trade-tbody"></tbody>
+      </table>
+      <div id="trade-empty" class="empty-state" style="display:none">
+        Hali trade yo'q. Yuqoridagi "Yangi Trade" tugmasini bosing.
+      </div>
+    </div>
+  </div>
+  <footer>© 2026 Trading Gold AI — Shaxsiy Xona</footer>
+</div>
+
+<!-- ══ PAGE 3: LIBRARY ══ -->
+<div id="page-library" class="page">
+  <div class="library-wrap">
+    <div class="lib-header">
+      <div>
+        <p class="section-label">Bilim Bazasi</p>
+        <h1 class="dash-title">Shaxsiy <span>Kutubxona</span></h1>
+      </div>
+      <button class="btn-primary" onclick="toggleForm('lib-form')">+ Yangi Bilim</button>
+    </div>
+
+    <!-- Add knowledge form -->
+    <div class="lib-form-wrap" id="lib-form" style="display:none">
+      <p class="form-title">— Yangi Bilim Qo'shish</p>
+      <div class="lib-form-grid">
+        <div class="form-group">
+          <label>Sarlavha</label>
+          <input type="text" id="l-title" placeholder="Masalan: Order Block nima?"/>
+        </div>
+        <div class="form-group">
+          <label>Kategoriya</label>
+          <select id="l-cat">
+            <option value="ict">📐 ICT / Price Action</option>
+            <option value="psych">🧠 Psixologiya</option>
+            <option value="risk">🛡️ Risk Management</option>
+            <option value="macro">🌍 Makroiqtisodiyot</option>
+            <option value="setup">📊 Setup / Strategiya</option>
+            <option value="other">📌 Boshqa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Manba (ixtiyoriy)</label>
+          <input type="text" id="l-source" placeholder="Kitob, video, kurs nomi"/>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:0.9rem">
+        <label>Mazmun / Eslatma</label>
+        <textarea id="l-content" style="min-height:100px" placeholder="O'rgangan narsangizni yozing — ta'rif, misol, qoidalar, eslatmalar..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveKnowledge()">Saqlash</button>
+        <button class="btn-ghost" onclick="toggleForm('lib-form')">Bekor</button>
+      </div>
+    </div>
+
+    <!-- Category filter -->
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterLib('all', this)">Barchasi</button>
+      <button class="filter-btn" onclick="filterLib('ict', this)">📐 ICT</button>
+      <button class="filter-btn" onclick="filterLib('psych', this)">🧠 Psixologiya</button>
+      <button class="filter-btn" onclick="filterLib('risk', this)">🛡️ Risk</button>
+      <button class="filter-btn" onclick="filterLib('macro', this)">🌍 Makro</button>
+      <button class="filter-btn" onclick="filterLib('setup', this)">📊 Setup</button>
+      <button class="filter-btn" onclick="filterLib('other', this)">📌 Boshqa</button>
+    </div>
+
+    <div class="lib-grid" id="lib-grid"></div>
+    <div id="lib-empty" class="empty-state" style="display:none">
+      Hali bilim yo'q. "Yangi Bilim" tugmasini bosing va o'rgangan narsangizni saqlang.
+    </div>
+  </div>
+  <footer>© 2026 Trading Gold AI — Kutubxona</footer>
+</div>
+
+<!-- PARTICLE CANVAS + APP LOGIC -->
+<script>
+// ── CANVAS ──
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, parts = [];
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); window.addEventListener('resize', resize);
+class P { constructor() { this.reset(); }
+  reset() { this.x=Math.random()*W; this.y=Math.random()*H; this.vx=(Math.random()-.5)*.3; this.vy=(Math.random()-.5)*.3; this.r=Math.random()*1.5+.4; this.a=Math.random(); }
+  upd() { this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset(); }
+  drw() { ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fillStyle=`rgba(201,168,76,${this.a*.6})`; ctx.fill(); }
+}
+for(let i=0;i<80;i++) parts.push(new P());
+function drawLines() {
+  for(let i=0;i<parts.length;i++) for(let j=i+1;j<parts.length;j++) {
+    const dx=parts[i].x-parts[j].x, dy=parts[i].y-parts[j].y, d=Math.sqrt(dx*dx+dy*dy);
+    if(d<120){ctx.beginPath();ctx.moveTo(parts[i].x,parts[i].y);ctx.lineTo(parts[j].x,parts[j].y);ctx.strokeStyle=`rgba(201,168,76,${(1-d/120)*.15})`;ctx.lineWidth=.5;ctx.stroke();}
+  }
+}
+(function loop(){ ctx.clearRect(0,0,W,H); parts.forEach(p=>{p.upd();p.drw();}); drawLines(); requestAnimationFrame(loop); })();
+
+// ── PAGE NAVIGATION ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='journal') renderTrades();
+  if(id==='library') renderLib();
+}
+
+function toggleForm(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── TRADE JOURNAL ──
+function getTrades() { try { return JSON.parse(localStorage.getItem('tg_trades')||'[]'); } catch(e){return[];} }
+function saveTrades(d) { localStorage.setItem('tg_trades', JSON.stringify(d)); }
+
+function saveTrade() {
+  const date  = document.getElementById('t-date').value;
+  const pair  = document.getElementById('t-pair').value;
+  const dir   = document.getElementById('t-dir').value;
+  const setup = document.getElementById('t-setup').value;
+  const entry = document.getElementById('t-entry').value;
+  const sl    = document.getElementById('t-sl').value;
+  const tp    = document.getElementById('t-tp').value;
+  const lot   = document.getElementById('t-lot').value;
+  const res   = document.getElementById('t-result').value;
+  const pnl   = document.getElementById('t-pnl').value;
+  const notes = document.getElementById('t-notes').value;
+  if(!date||!entry) { alert("Sana va Entry narxini kiriting!"); return; }
+  const trades = getTrades();
+  trades.unshift({ id: Date.now(), date, pair, dir, setup, entry, sl, tp, lot, res, pnl: parseFloat(pnl)||0, notes });
+  saveTrades(trades);
+  ['t-date','t-entry','t-sl','t-tp','t-lot','t-pnl','t-notes'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('t-result').value='WIN';
+  toggleForm('trade-form');
+  renderTrades();
+}
+
+let currentFilter = 'all';
+function filterTrades(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTrades();
+}
+
+function deleteTrade(id) {
+  if(!confirm('Bu tradeni o\'chirasizmi?')) return;
+  saveTrades(getTrades().filter(t=>t.id!==id));
+  renderTrades();
+}
+
+function renderTrades() {
+  let trades = getTrades();
+  // stats
+  const total = trades.length;
+  const wins  = trades.filter(t=>t.res==='WIN').length;
+  const losses= trades.filter(t=>t.res==='LOSS').length;
+  const pnlSum= trades.reduce((s,t)=>s+(t.pnl||0),0);
+  const wr    = total ? Math.round(wins/total*100) : 0;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-wins').textContent  = wins;
+  document.getElementById('s-losses').textContent= losses;
+  document.getElementById('s-winrate').textContent= wr+'%';
+  const pnlEl = document.getElementById('s-pnl');
+  pnlEl.textContent = (pnlSum>=0?'+':'')+pnlSum.toFixed(2)+'$';
+  pnlEl.className = 'stat-box-value '+(pnlSum>=0?'green':'red');
+
+  // filter
+  if(currentFilter!=='all') {
+    trades = trades.filter(t=>t.res===currentFilter||t.dir===currentFilter);
+  }
+
+  const tbody = document.getElementById('trade-tbody');
+  const empty = document.getElementById('trade-empty');
+  if(!trades.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  const resMap = { WIN:'<span class="badge badge-win">WIN ✅</span>', LOSS:'<span class="badge badge-loss">LOSS ❌</span>', BE:'<span class="badge" style="color:#E8C96E;border:1px solid #E8C96E22;background:rgba(232,201,110,.08)">BE ⚖️</span>', OPEN:'<span class="badge" style="color:#60A5FA;border:1px solid #60A5FA33;background:rgba(96,165,250,.08)">OPEN 🔄</span>' };
+
+  tbody.innerHTML = trades.map(t=>`
+    <tr>
+      <td style="white-space:nowrap;color:var(--mist);font-family:'Space Mono',monospace;font-size:0.7rem">${t.date}</td>
+      <td style="font-weight:600">${t.pair}</td>
+      <td><span class="badge ${t.dir==='BUY'?'badge-buy':'badge-sell'}">${t.dir}</span></td>
+      <td style="color:var(--mist);font-size:0.76rem">${t.setup}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.76rem">${t.entry}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--red)">${t.sl||'—'}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--green)">${t.tp||'—'}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--mist)">${t.lot||'—'}</td>
+      <td>${resMap[t.res]||t.res}</td>
+      <td class="${t.pnl>=0?'pnl-positive':'pnl-negative'}" style="font-family:'Space Mono',monospace;font-size:0.8rem">${t.pnl>=0?'+':''}${(t.pnl||0).toFixed(2)}$</td>
+      <td style="max-width:200px;font-size:0.76rem;color:var(--mist);white-space:pre-wrap">${t.notes||'—'}</td>
+      <td><button class="del-btn" onclick="deleteTrade(${t.id})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+// ── LIBRARY ──
+function getLib() { try { return JSON.parse(localStorage.getItem('tg_library')||'[]'); } catch(e){return[];} }
+function saveLib(d) { localStorage.setItem('tg_library', JSON.stringify(d)); }
+
+const catLabel = { ict:'📐 ICT', psych:'🧠 Psixologiya', risk:'🛡️ Risk', macro:'🌍 Makro', setup:'📊 Setup', other:'📌 Boshqa' };
+
+function saveKnowledge() {
+  const title   = document.getElementById('l-title').value.trim();
+  const cat     = document.getElementById('l-cat').value;
+  const source  = document.getElementById('l-source').value.trim();
+  const content = document.getElementById('l-content').value.trim();
+  if(!title||!content) { alert("Sarlavha va mazmunni kiriting!"); return; }
+  const lib = getLib();
+  lib.unshift({ id: Date.now(), title, cat, source, content, date: new Date().toLocaleDateString('uz-UZ') });
+  saveLib(lib);
+  ['l-title','l-source','l-content'].forEach(id=>{document.getElementById(id).value='';});
+  toggleForm('lib-form');
+  renderLib();
+}
+
+let libFilter = 'all';
+function filterLib(f, btn) {
+  libFilter = f;
+  document.querySelectorAll('.filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLib();
+}
+
+function deleteKnowledge(id) {
+  if(!confirm('Bu yozuvni o\'chirasizmi?')) return;
+  saveLib(getLib().filter(k=>k.id!==id));
+  renderLib();
+}
+
+function renderLib() {
+  let items = getLib();
+  if(libFilter!=='all') items = items.filter(k=>k.cat===libFilter);
+  const grid = document.getElementById('lib-grid');
+  const empty= document.getElementById('lib-empty');
+  if(!items.length){ grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  grid.innerHTML = items.map(k=>`
+    <div class="lib-card">
+      <div class="lib-card-cat">
+        <span class="cat-tag cat-${k.cat}">${catLabel[k.cat]||k.cat}</span>
+      </div>
+      <p class="lib-card-title">${k.title}</p>
+      <p class="lib-card-desc">${k.content.replace(/\n/g,'<br>')}</p>
+      ${k.source?`<p class="lib-card-date">📖 Manba: ${k.source}</p>`:''}
+      <p class="lib-card-date">🗓 ${k.date}</p>
+      <div class="lib-card-del">
+        <button class="del-btn" onclick="deleteKnowledge(${k.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Set today's date default
+document.getElementById('t-date').value = new Date().toISOString().split('T')[0];
+// Init nav
+document.getElementById('nav-landing').classList.add('active');
+</script>
+</body>
+</html>
